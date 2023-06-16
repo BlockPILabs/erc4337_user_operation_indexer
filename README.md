@@ -8,27 +8,27 @@ make
 ## Usage
 ### memory db
 ```bash
-./build/indexer \n
-  --chain polygon-mumbai  \n
-  --backend https://polygon-mumbai.blockpi.network/v1/rpc/{APIKEY}  \n
+./build/indexer \
+  --chain polygon-mumbai  \
+  --backend https://polygon-mumbai.blockpi.network/v1/rpc/{APIKEY}  \
   --db.engin memory
 ```
 
 ### redis
 ```bash
-./build/indexer \n
-  --chain polygon-mumbai \n
-  --backend https://polygon-mumbai.blockpi.network/v1/rpc/{APIKEY} \n
-  --db.engin redis \n
+./build/indexer \
+  --chain polygon-mumbai \
+  --backend https://polygon-mumbai.blockpi.network/v1/rpc/{APIKEY} \
+  --db.engin redis \
   --db.ds "redis://passwd@127.0.0.1:6379"
 ```
 
 ### pebble
 ```bash
-./build/indexer \n
-  --chain polygon-mumbai \n
-  --backend https://polygon-mumbai.blockpi.network/v1/rpc/{APIKEY} \n
-  --db.engin pebble \n
+./build/indexer \
+  --chain polygon-mumbai \
+  --backend https://polygon-mumbai.blockpi.network/v1/rpc/{APIKEY} \
+  --db.engin pebble \
   --db.ds "data/db"
 ```
 
