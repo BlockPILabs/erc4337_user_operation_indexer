@@ -1,0 +1,27 @@
+
+CREATE TABLE "public"."block_record_info" (
+  "id" int8 NOT NULL DEFAULT nextval('block_record_info_id_seq'::regclass),
+  "chain" varchar COLLATE "pg_catalog"."default",
+  "last_block_number" int8,
+  "create_time" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" timestamp(6)
+);
+ALTER TABLE "public"."block_record_info" ADD CONSTRAINT "block_record_info_pkey" PRIMARY KEY ("id");
+
+
+CREATE TABLE "public"."operation_info" (
+  "id" int8 NOT NULL DEFAULT nextval('operation_info_id_seq'::regclass),
+  "user_op_hash" varchar(255) COLLATE "pg_catalog"."default",
+  "sender" varchar(255) COLLATE "pg_catalog"."default",
+  "paymaster" varchar(255) COLLATE "pg_catalog"."default",
+  "nonce" int8,
+  "success" int2,
+  "actual_gas_cost" int8,
+  "actual_gas_used" int8,
+  "tx_hash" varchar(255) COLLATE "pg_catalog"."default",
+  "block_number" int8,
+  "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE "public"."operation_info" ADD CONSTRAINT "operation_info_pkey" PRIMARY KEY ("id");
+
+
