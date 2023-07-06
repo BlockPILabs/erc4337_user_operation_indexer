@@ -19,8 +19,8 @@ import (
 )
 
 var (
-	_logDescriptor = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f"
-	_logTopics     = [][]common.Hash{{common.HexToHash(_logDescriptor)}}
+	LogDescriptor = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f"
+	_logTopics    = [][]common.Hash{{common.HexToHash(LogDescriptor)}}
 )
 
 type Backend struct {

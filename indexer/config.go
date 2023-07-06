@@ -3,6 +3,7 @@ package indexer
 import (
 	"github.com/urfave/cli/v2"
 	"math"
+	"strings"
 )
 
 var (
@@ -34,11 +35,12 @@ type Config struct {
 }
 
 func ParseConfig(ctx *cli.Context) *Config {
+	chain := ctx.String(FlagChain.Name)
+
 	var startBlock int64
 	if ctx.IsSet(FlagEthLogsStartBlock.Name) {
 		startBlock = ctx.Int64(FlagEthLogsStartBlock.Name)
 	} else {
-		chain := ctx.String(FlagChain.Name)
 		startBlock = DefaultStartBlocks[chain]
 	}
 
@@ -49,13 +51,17 @@ func ParseConfig(ctx *cli.Context) *Config {
 	}
 
 	dbKeyPrefix = ctx.String(FlagDbPrefix.Name)
+	if len(dbKeyPrefix) == 0 {
+		dbKeyPrefix = chain
+	}
+
 	blockRange := int64(math.Max(math.Min(5000, float64(ctx.Int64(FlagEthLogsBlockRange.Name))), 1))
 	cfg := &Config{
 		RpcListen:      ctx.String(FlagListen.Name),
 		BackendUrl:     ctx.String(FlagBackendUrl.Name),
 		DbEngin:        dbEngin,
 		DbDataSource:   dataSource,
-		EntryPoint:     ctx.String(FlagEntryPoint.Name),
+		EntryPoint:     strings.ToLower(ctx.String(FlagEntryPoint.Name)),
 		StartBlock:     startBlock,
 		BlockRangeSize: blockRange,
 	}

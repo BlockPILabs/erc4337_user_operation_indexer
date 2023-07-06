@@ -2,9 +2,9 @@ package rpc
 
 import "encoding/json"
 
-var ID0 = json.RawMessage{0, 0, 0, 0}
+var ID0 []byte = nil
 
-type JsonrpcMessage struct {
+type JsonRpcMessage struct {
 	Version string          `json:"jsonrpc,omitempty"`
 	ID      json.RawMessage `json:"id,omitempty"`
 	Method  string          `json:"method,omitempty"`
@@ -19,20 +19,20 @@ type JsonrpcError struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-func ParseJsonrpcMessage(data []byte) *JsonrpcMessage {
-	var ret *JsonrpcMessage
+func ParseJsonRpcMessage(data []byte) *JsonRpcMessage {
+	var ret *JsonRpcMessage
 	json.Unmarshal(data, &ret)
 	return ret
 }
 
-func NewJsonrpcMessage(id []byte) *JsonrpcMessage {
-	return &JsonrpcMessage{ID: id, Version: "2.0"}
+func NewJsonRpcMessage(id []byte) *JsonRpcMessage {
+	return &JsonRpcMessage{ID: id, Version: "2.0"}
 }
 
-func NewJsonrpcMessageWithError(id []byte, err string) *JsonrpcMessage {
-	return &JsonrpcMessage{
+func NewJsonRpcMessageWithError(id []byte, code int, err string) *JsonRpcMessage {
+	return &JsonRpcMessage{
 		ID:      id,
 		Version: "2.0",
-		Error:   &JsonrpcError{Code: -32000, Message: err},
+		Error:   &JsonrpcError{Code: code, Message: "indexer: " + err},
 	}
 }

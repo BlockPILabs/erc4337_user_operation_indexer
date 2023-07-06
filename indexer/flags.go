@@ -37,7 +37,7 @@ var (
 
 	FlagDbPrefix = &cli.StringFlag{
 		Name:  "db.prefix",
-		Usage: "Backing database prefix",
+		Usage: "Backing database prefix, default: same value with --chain",
 		Value: "",
 	}
 
