@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package x.blockpi.indexer;
+
+option go_package = "/x/proto";
+
+message Request {
+  bytes body = 1;
+}
+
+message Response {
+  bytes body = 1;
+}
+
+service Relay {
+  rpc Relay (Request) returns (Response);
+}

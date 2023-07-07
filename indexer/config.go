@@ -26,6 +26,7 @@ var (
 
 type Config struct {
 	RpcListen      string
+	GrpcListen     string
 	EntryPoint     string
 	BackendUrl     string
 	DbEngin        string
@@ -58,6 +59,7 @@ func ParseConfig(ctx *cli.Context) *Config {
 	blockRange := int64(math.Max(math.Min(5000, float64(ctx.Int64(FlagEthLogsBlockRange.Name))), 1))
 	cfg := &Config{
 		RpcListen:      ctx.String(FlagListen.Name),
+		GrpcListen:     ctx.String(FlagGrpcListen.Name),
 		BackendUrl:     ctx.String(FlagBackendUrl.Name),
 		DbEngin:        dbEngin,
 		DbDataSource:   dataSource,

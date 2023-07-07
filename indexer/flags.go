@@ -17,6 +17,12 @@ var (
 		Value: "127.0.0.1:2052",
 	}
 
+	FlagGrpcListen = &cli.StringFlag{
+		Name:  "grpc.listen",
+		Usage: "grpc.listen",
+		Value: "127.0.0.1:2053",
+	}
+
 	FlagChain = &cli.StringFlag{
 		Name:  "chain",
 		Usage: "Chain",

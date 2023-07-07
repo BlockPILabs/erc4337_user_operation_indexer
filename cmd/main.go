@@ -18,6 +18,7 @@ func RootApp() *cli.App {
 		Flags: []cli.Flag{
 			indexer.FlagVersion,
 			indexer.FlagListen,
+			indexer.FlagGrpcListen,
 			indexer.FlagChain,
 			indexer.FlagEntryPoint,
 			indexer.FlagBackendUrl,
