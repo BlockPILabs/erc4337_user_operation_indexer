@@ -3,7 +3,6 @@ package indexer
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/web3"
@@ -49,12 +48,12 @@ func eth_getLogs(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
 		return rpc.NewJsonRpcMessageWithError(req.ID, -32000, "address mismatch entrypoint "+entrypoint)
 	}
 
-	descriptor := strings.ToLower(fmt.Sprintf("%v", param.Topics[0]))
+	descriptor := strings.ToLower(param.Topics[0])
 	if descriptor != LogDescriptor {
 		return rpc.NewJsonRpcMessageWithError(req.ID, -32000, "invalid Log descriptor: "+descriptor)
 	}
 
-	opHash := fmt.Sprintf("%v", param.Topics[1])
+	opHash := strings.ToLower(param.Topics[1])
 	data, _ := s.Db().Get(DbKeyUserOp(opHash))
 
 	if len(data) > 0 {
@@ -65,7 +64,7 @@ func eth_getLogs(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
 		json.Unmarshal(data, &info)
 
 		for i := 0; i < len(param.Topics) && i < len(info.Topics); i++ {
-			if param.Topics[i] != info.Topics[i] {
+			if strings.ToLower(param.Topics[i]) != strings.ToLower(info.Topics[i]) {
 				data = []byte("")
 				break
 			}

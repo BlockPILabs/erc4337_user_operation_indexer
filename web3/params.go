@@ -3,7 +3,6 @@ package web3
 import (
 	"encoding/json"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
-	"strings"
 )
 
 func IsJsonArray(raw []byte) bool {
@@ -58,8 +57,6 @@ func ParseEthGetLogsRequestParams(req *rpc.JsonRpcMessage) (*EthGetLogsRequestPa
 	if len(address) == 0 {
 		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32602, "address wanted")
 	}
-
-	address = strings.ToLower(address)
 
 	if len(param.Topics) == 0 {
 		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "topics wanted")
