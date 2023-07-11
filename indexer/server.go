@@ -19,6 +19,7 @@ type Server struct {
 	logger     log.Logger
 	entryPoint string
 	handlers   map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage
+	compress   bool
 }
 
 func (s *Server) Db() database.KVStore {
@@ -29,6 +30,10 @@ func (s *Server) EntryPoint() string {
 	return s.entryPoint
 }
 
+func (s *Server) Compressed() bool {
+	return s.compress
+}
+
 func NewServer(cfg *Config, db database.KVStore) *Server {
 	return &Server{
 		listen:     cfg.RpcListen,
@@ -36,6 +41,7 @@ func NewServer(cfg *Config, db database.KVStore) *Server {
 		logger:     log.Module("server"),
 		handlers:   map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage{},
 		entryPoint: cfg.EntryPoint,
+		compress:   cfg.Compress,
 	}
 }
 

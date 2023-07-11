@@ -52,6 +52,12 @@ var (
 		Value: "",
 	}
 
+	FlagCompress = &cli.BoolFlag{
+		Name:  "compress",
+		Usage: "compress",
+		Value: false,
+	}
+
 	FlagDbPrefix = &cli.StringFlag{
 		Name:  "db.prefix",
 		Usage: "Backing database prefix, default: same value with --chain",

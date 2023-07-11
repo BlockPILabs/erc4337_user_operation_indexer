@@ -20,6 +20,7 @@ type GrpcServer struct {
 	handlers             map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage
 	maxConcurrentStreams int
 	logger               log.Logger
+	compress             bool
 }
 
 func (s *GrpcServer) Db() database.KVStore {
@@ -30,6 +31,10 @@ func (s *GrpcServer) EntryPoint() string {
 	return s.entryPoint
 }
 
+func (s *GrpcServer) Compressed() bool {
+	return s.compress
+}
+
 func NewGrpcServer(cfg *Config, db database.KVStore) *GrpcServer {
 	return &GrpcServer{
 		listen:               cfg.GrpcListen,
@@ -38,6 +43,7 @@ func NewGrpcServer(cfg *Config, db database.KVStore) *GrpcServer {
 		handlers:             map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage{},
 		maxConcurrentStreams: 4096,
 		logger:               log.Module("grpc-server"),
+		compress:             cfg.Compress,
 	}
 }
 

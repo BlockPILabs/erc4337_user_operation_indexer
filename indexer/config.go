@@ -52,6 +52,7 @@ type Config struct {
 	DbDataSource   string
 	StartBlock     int64
 	BlockRangeSize int64
+	Compress       bool
 }
 
 func ParseConfig(ctx *cli.Context) *Config {
@@ -93,6 +94,7 @@ func ParseConfig(ctx *cli.Context) *Config {
 		EntryPoint:     strings.ToLower(ctx.String(FlagEntryPoint.Name)),
 		StartBlock:     startBlock,
 		BlockRangeSize: blockRange,
+		Compress:       ctx.Bool(FlagCompress.Name),
 	}
 	return cfg
 }

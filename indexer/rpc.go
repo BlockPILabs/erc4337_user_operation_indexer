@@ -6,12 +6,14 @@ import (
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/web3"
+	"github.com/golang/snappy"
 	"strings"
 )
 
 type Rpc interface {
 	Db() database.KVStore
 	EntryPoint() string
+	Compressed() bool
 }
 
 func eth_getLogsByUserOperation(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
@@ -24,6 +26,13 @@ func eth_getLogsByUserOperation(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMess
 	var logs = make([][]byte, len(params))
 	for i, hash := range params {
 		data, _ := s.Db().Get(DbKeyUserOp(hash))
+		if data != nil && s.Compressed() {
+			decoded, err := snappy.Decode(nil, data)
+			if err == nil {
+				data = decoded
+			}
+		}
+
 		if data == nil {
 			data = []byte("null")
 		}
@@ -55,6 +64,13 @@ func eth_getLogs(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
 
 	opHash := strings.ToLower(param.Topics[1])
 	data, _ := s.Db().Get(DbKeyUserOp(opHash))
+
+	if data != nil && s.Compressed() {
+		decoded, err := snappy.Decode(nil, data)
+		if err == nil {
+			data = decoded
+		}
+	}
 
 	if len(data) > 0 {
 		info := struct {

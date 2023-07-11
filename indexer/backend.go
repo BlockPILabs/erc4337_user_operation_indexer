@@ -13,6 +13,7 @@ import (
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/web3"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/golang/snappy"
 	"math"
 	"math/big"
 	"strconv"
@@ -27,17 +28,19 @@ var (
 )
 
 type Backend struct {
-	ChainId         string
+	chainId         string
 	db              database.KVStore
-	EntryPoints     []common.Address
+	entryPoints     []common.Address
 	rpcUrls         []string
 	startBlock      int64
 	blockRange      int64
-	PullingInterval time.Duration
+	pullingInterval time.Duration
 
 	web3Clients []*web3.Web3
 
 	logger log.Logger
+
+	compress bool
 }
 
 func NewDb(engin, dataSource string) database.KVStore {
@@ -92,14 +95,14 @@ func NewBackend(cfg *Config) *Backend {
 	}
 
 	return &Backend{
-		ChainId:         cfg.ChainId,
+		chainId:         cfg.ChainId,
 		db:              NewDb(cfg.DbEngin, cfg.DbDataSource),
-		EntryPoints:     []common.Address{common.HexToAddress(cfg.EntryPoint)},
+		entryPoints:     []common.Address{common.HexToAddress(cfg.EntryPoint)},
 		rpcUrls:         cfg.BackendUrls,
 		startBlock:      cfg.StartBlock,
 		blockRange:      cfg.BlockRangeSize,
 		logger:          logger,
-		PullingInterval: time.Duration(1000) * time.Millisecond,
+		pullingInterval: time.Duration(1000) * time.Millisecond,
 		web3Clients:     clients,
 	}
 }
@@ -177,7 +180,7 @@ func (b *Backend) Run() error {
 
 		b.CallAndSave(fromBlock, toBlock, cli)
 
-		time.Sleep(time.Since(startTime) - b.PullingInterval)
+		time.Sleep(time.Since(startTime) - b.pullingInterval)
 	}
 	//return errors.New("backend exited")
 }
@@ -189,7 +192,7 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 	param := ethereum.FilterQuery{
 		FromBlock: big.NewInt(fromBlock),
 		ToBlock:   big.NewInt(toBlock),
-		Addresses: b.EntryPoints,
+		Addresses: b.entryPoints,
 		Topics:    _logTopics,
 	}
 	ethlogs, err := cli.Cli().FilterLogs(ctx, param)
@@ -202,6 +205,11 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 	for _, ethlog := range ethlogs {
 		hash := ethlog.Topics[1].Hex()
 		data, _ := json.Marshal(ethlog)
+
+		if b.compress {
+			data = snappy.Encode(nil, data)
+		}
+
 		b.db.Put(DbKeyUserOp(hash), data)
 		//nextBlockNumber = int64(ethlog.BlockNumber + 1)
 	}
