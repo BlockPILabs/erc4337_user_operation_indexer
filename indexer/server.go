@@ -42,6 +42,7 @@ func NewServer(cfg *Config, db database.KVStore) *Server {
 func (s *Server) Run() error {
 	s.registerHandlers()
 	http.HandleFunc("/", s.handler)
+	http.HandleFunc("/status", s.status)
 	s.logger.Info("aip server listen: " + s.listen)
 	err := http.ListenAndServe(s.listen, nil)
 	if err != nil {
@@ -97,4 +98,20 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) registerHandlers() {
 	s.handlers["eth_getLogsByUserOperation"] = eth_getLogsByUserOperation
 	s.handlers["eth_getLogs"] = eth_getLogs
+}
+
+type Status struct {
+	BlockNumber int64 `json:"block_number"`
+	LatestBlock int64 `json:"latest_block"`
+	CatchingUp  bool  `json:"catching_up"`
+}
+
+func (s *Server) status(w http.ResponseWriter, r *http.Request) {
+	status := Status{
+		BlockNumber: gBlockNumber,
+		LatestBlock: gLatestBlock,
+		CatchingUp:  !(gBlockNumber >= (gLatestBlock - 5)),
+	}
+	data, _ := json.Marshal(status)
+	w.Write(data)
 }

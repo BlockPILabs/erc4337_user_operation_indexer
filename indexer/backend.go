@@ -21,6 +21,8 @@ import (
 var (
 	LogDescriptor = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f"
 	_logTopics    = [][]common.Hash{{common.HexToHash(LogDescriptor)}}
+	gBlockNumber  int64
+	gLatestBlock  int64
 )
 
 type Backend struct {
@@ -92,6 +94,7 @@ func (b *Backend) StartBlock() int64 {
 }
 
 func (b *Backend) SetNextStartBlock(block int64) {
+	gBlockNumber = block
 	next := []byte(fmt.Sprintf("%v", block))
 	err := b.db.Put(DbKeyStartBlock, next)
 	if err != nil {
@@ -107,6 +110,9 @@ func (b *Backend) Run() error {
 		if err != nil {
 			continue
 		}
+
+		gLatestBlock = int64(latestBlockNumber)
+
 		fromBlock := b.StartBlock()
 		toBlock := int64(math.Min(float64(fromBlock+b.blockRange-1), float64(latestBlockNumber)))
 		if fromBlock > toBlock {
