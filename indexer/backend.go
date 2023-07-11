@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/memorydb"
@@ -26,14 +27,15 @@ var (
 )
 
 type Backend struct {
+	ChainId         string
 	db              database.KVStore
 	EntryPoints     []common.Address
-	rpcUrl          string
+	rpcUrls         []string
 	startBlock      int64
 	blockRange      int64
 	PullingInterval time.Duration
 
-	web3Cli *web3.Web3
+	web3Clients []*web3.Web3
 
 	logger log.Logger
 }
@@ -59,25 +61,74 @@ func NewDb(engin, dataSource string) database.KVStore {
 }
 
 func NewBackend(cfg *Config) *Backend {
-	web3Cli, _ := web3.NewWeb3Client(cfg.BackendUrl)
+	logger := log.Module("backend")
+
+	var clients []*web3.Web3
+	for _, url := range cfg.BackendUrls {
+		for n := 0; n < 10; n++ {
+			cli, err := web3.NewWeb3Client(url)
+			if err != nil {
+				logger.Error("error connect rpc", "url", url, "err", err)
+				continue
+			}
+
+			result, err := cli.Cli().ChainID(context.Background())
+			if err != nil {
+				logger.Error("error connect rpc", "url", url, "err", err)
+				continue
+			}
+			chainId := result.String()
+			if cfg.ChainId != chainId {
+				logger.Error(fmt.Sprintf("error connect rpc, chain id %s expect %s", chainId, cfg.ChainId), "url", url)
+				break
+			}
+			clients = append(clients, cli)
+			break
+		}
+	}
+
+	if len(clients) == 0 {
+		panic("backend no available rpc")
+	}
+
 	return &Backend{
+		ChainId:         cfg.ChainId,
 		db:              NewDb(cfg.DbEngin, cfg.DbDataSource),
 		EntryPoints:     []common.Address{common.HexToAddress(cfg.EntryPoint)},
-		rpcUrl:          cfg.BackendUrl,
+		rpcUrls:         cfg.BackendUrls,
 		startBlock:      cfg.StartBlock,
 		blockRange:      cfg.BlockRangeSize,
-		logger:          log.Module("backend"),
+		logger:          logger,
 		PullingInterval: time.Duration(1000) * time.Millisecond,
-		web3Cli:         web3Cli,
+		web3Clients:     clients,
 	}
 }
 
-func (b *Backend) LatestBlockNumber() (uint64, error) {
-	blockNumber, err := b.web3Cli.Cli().BlockNumber(context.Background())
-	if err != nil {
-		return 0, err
+func (b *Backend) LatestBlockNumber() (uint64, *web3.Web3, error) {
+	var cli *web3.Web3
+	var blockNumberMax uint64
+	var blockNumber uint64
+	var err error
+	for idx, _ := range b.web3Clients {
+		blockNumber, err = b.web3Clients[idx].Cli().BlockNumber(context.Background())
+		if err != nil {
+			continue
+		}
+		if blockNumber > blockNumberMax {
+			blockNumberMax = blockNumber
+			cli = b.web3Clients[idx]
+		}
 	}
-	return blockNumber, nil
+
+	if cli == nil {
+		if err != nil {
+			err = errors.New("server error")
+		}
+	} else {
+		err = nil
+	}
+
+	return blockNumberMax, cli, err
 }
 
 func (b *Backend) StartBlock() int64 {
@@ -106,7 +157,7 @@ func (b *Backend) Run() error {
 	for {
 		startTime := time.Now()
 
-		latestBlockNumber, err := b.LatestBlockNumber()
+		latestBlockNumber, cli, err := b.LatestBlockNumber()
 		if err != nil {
 			continue
 		}
@@ -124,15 +175,15 @@ func (b *Backend) Run() error {
 			fromBlock = toBlock - b.blockRange + 1
 		}
 
-		b.CallAndSave(fromBlock, toBlock)
+		b.CallAndSave(fromBlock, toBlock, cli)
 
 		time.Sleep(time.Since(startTime) - b.PullingInterval)
 	}
 	//return errors.New("backend exited")
 }
 
-func (b *Backend) CallAndSave(fromBlock, toBlock int64) error {
-	b.logger.Info(fmt.Sprintf("filter logs range [%v,%v]", fromBlock, toBlock))
+func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
+	b.logger.Info(fmt.Sprintf("filter logs range [%v,%v]", fromBlock, toBlock), "url", cli.Url())
 
 	ctx := context.Background()
 	param := ethereum.FilterQuery{
@@ -141,9 +192,9 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64) error {
 		Addresses: b.EntryPoints,
 		Topics:    _logTopics,
 	}
-	ethlogs, err := b.web3Cli.Cli().FilterLogs(ctx, param)
+	ethlogs, err := cli.Cli().FilterLogs(ctx, param)
 	if err != nil {
-		b.logger.Error("error filter logs", "err", err)
+		b.logger.Error("error filter logs", "err", err, "url", cli.Url())
 		return err
 	}
 

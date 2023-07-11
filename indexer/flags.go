@@ -5,6 +5,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func _mustMarshal(src any) []byte {
+	result, _ := json.Marshal(src)
+	return result
+}
+
 var (
 	FlagVersion = &cli.BoolFlag{
 		Name:  "version",
@@ -27,6 +32,12 @@ var (
 		Name:  "chain",
 		Usage: "Chain",
 		Value: "",
+	}
+
+	FlagChainId = &cli.StringFlag{
+		Name:  "chain.id",
+		Usage: "chain.id",
+		Value: string(_mustMarshal(DefaultChainId)),
 	}
 
 	FlagEntryPoint = &cli.StringFlag{
@@ -59,10 +70,9 @@ var (
 		Value: "",
 	}
 
-	usage, _              = json.Marshal(DefaultStartBlocks)
 	FlagEthLogsStartBlock = &cli.Int64Flag{
 		Name:  "block.start",
-		Usage: string(usage),
+		Usage: string(_mustMarshal(DefaultStartBlocks)),
 		Value: 0,
 	}
 
