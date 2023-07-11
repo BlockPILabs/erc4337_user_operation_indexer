@@ -36,8 +36,8 @@ var (
 
 	FlagChainId = &cli.StringFlag{
 		Name:  "chain.id",
-		Usage: "chain.id",
-		Value: string(_mustMarshal(DefaultChainId)),
+		Usage: string(_mustMarshal(DefaultChainId)),
+		Value: "",
 	}
 
 	FlagEntryPoint = &cli.StringFlag{
