@@ -182,9 +182,10 @@ func (b *Backend) Run() error {
 
 			fromBlock := b.StartBlock()
 			toBlock := int64(math.Min(float64(fromBlock+b.blockRange-1), float64(latestBlockNumber)))
-			if fromBlock > toBlock {
+			if fromBlock > toBlock+10 {
 				//b.logger.Debug(fmt.Sprintf("error block range from > to: %v > %v", fromBlock, toBlock))
-				return fmt.Errorf("error block range from > to: %v > %v", fromBlock, toBlock)
+				//return fmt.Errorf("error block range from > to: %v > %v", fromBlock, toBlock)
+				return nil
 			}
 
 			if toBlock-fromBlock < b.blockRange {
