@@ -28,11 +28,12 @@ var (
 )
 
 type Backend struct {
-	chainId         string
+	chain           string
 	db              database.KVStore
 	entryPoints     []common.Address
 	rpcUrls         []string
 	startBlock      int64
+	startBlockDbKey string
 	blockRange      int64
 	pullingInterval time.Duration
 
@@ -63,11 +64,11 @@ func NewDb(engin, dataSource string) database.KVStore {
 	return db
 }
 
-func NewBackend(cfg *Config) *Backend {
+func NewBackend(eps []string, chain ChainCfg, db database.KVStore) *Backend {
 	logger := log.Module("backend")
 
 	var clients []*web3.Web3
-	for _, url := range cfg.BackendUrls {
+	for _, url := range chain.Backends {
 		for n := 0; n < 10; n++ {
 			cli, err := web3.NewWeb3Client(url)
 			if err != nil {
@@ -81,8 +82,8 @@ func NewBackend(cfg *Config) *Backend {
 				continue
 			}
 			chainId := result.String()
-			if cfg.ChainId != chainId {
-				logger.Error(fmt.Sprintf("error connect rpc, chain id %s expect %s", chainId, cfg.ChainId), "url", url)
+			if chain.ChainId != chainId {
+				logger.Error(fmt.Sprintf("error connect rpc, chain id %s expect %s", chainId, chain.ChainId), "url", url)
 				break
 			}
 			clients = append(clients, cli)
@@ -94,17 +95,25 @@ func NewBackend(cfg *Config) *Backend {
 		panic("backend no available rpc")
 	}
 
-	return &Backend{
-		chainId:         cfg.ChainId,
-		db:              NewDb(cfg.DbEngin, cfg.DbDataSource),
-		entryPoints:     []common.Address{common.HexToAddress(cfg.EntryPoint)},
-		rpcUrls:         cfg.BackendUrls,
-		startBlock:      cfg.StartBlock,
-		blockRange:      cfg.BlockRangeSize,
+	backend := &Backend{
+		chain:           chain.Chain,
+		db:              db,
+		entryPoints:     nil,
+		rpcUrls:         chain.Backends,
+		startBlock:      chain.StartBlock,
+		blockRange:      chain.BlockRangeSize,
 		logger:          logger,
 		pullingInterval: time.Duration(1000) * time.Millisecond,
 		web3Clients:     clients,
+
+		startBlockDbKey: DbKeyStartBlock(chain.Chain),
 	}
+
+	for _, ep := range eps {
+		backend.entryPoints = append(backend.entryPoints, common.HexToAddress(ep))
+	}
+
+	return backend
 }
 
 func (b *Backend) LatestBlockNumber() (uint64, *web3.Web3, error) {
@@ -115,6 +124,7 @@ func (b *Backend) LatestBlockNumber() (uint64, *web3.Web3, error) {
 	for idx, _ := range b.web3Clients {
 		blockNumber, err = b.web3Clients[idx].Cli().BlockNumber(context.Background())
 		if err != nil {
+			b.logger.Error("error get latest block number", "err", err)
 			continue
 		}
 		if blockNumber > blockNumberMax {
@@ -135,9 +145,9 @@ func (b *Backend) LatestBlockNumber() (uint64, *web3.Web3, error) {
 }
 
 func (b *Backend) StartBlock() int64 {
-	val, err := b.db.Get(DbKeyStartBlock)
+	val, err := b.db.Get(b.startBlockDbKey)
 	if err != nil {
-		panic(fmt.Sprintf("error get db key %s: %s", DbKeyStartBlock, err.Error()))
+		panic(fmt.Sprintf("error get db key %s: %s", b.startBlockDbKey, err.Error()))
 	}
 	if len(val) == 0 {
 		return b.startBlock
@@ -150,7 +160,7 @@ func (b *Backend) StartBlock() int64 {
 func (b *Backend) SetNextStartBlock(block int64) {
 	gBlockNumber = block
 	next := []byte(fmt.Sprintf("%v", block))
-	err := b.db.Put(DbKeyStartBlock, next)
+	err := b.db.Put(b.startBlockDbKey, next)
 	if err != nil {
 		panic(fmt.Sprintf("error put db key %s: %s", DbKeyStartBlock, err.Error()))
 	}
@@ -160,25 +170,31 @@ func (b *Backend) Run() error {
 	for {
 		startTime := time.Now()
 
-		latestBlockNumber, cli, err := b.LatestBlockNumber()
+		err := func() error {
+			latestBlockNumber, cli, err := b.LatestBlockNumber()
+			if err != nil {
+				return err
+			}
+
+			gLatestBlock = int64(latestBlockNumber)
+
+			fromBlock := b.StartBlock()
+			toBlock := int64(math.Min(float64(fromBlock+b.blockRange-1), float64(latestBlockNumber)))
+			if fromBlock > toBlock {
+				//b.logger.Debug(fmt.Sprintf("error block range from > to: %v > %v", fromBlock, toBlock))
+				return fmt.Errorf("error block range from > to: %v > %v", fromBlock, toBlock)
+			}
+
+			if toBlock-fromBlock < b.blockRange {
+				fromBlock = toBlock - b.blockRange + 1
+			}
+
+			return b.CallAndSave(fromBlock, toBlock, cli)
+		}()
+
 		if err != nil {
-			continue
+			b.logger.Error(err.Error())
 		}
-
-		gLatestBlock = int64(latestBlockNumber)
-
-		fromBlock := b.StartBlock()
-		toBlock := int64(math.Min(float64(fromBlock+b.blockRange-1), float64(latestBlockNumber)))
-		if fromBlock > toBlock {
-			//b.logger.Debug(fmt.Sprintf("error block range from > to: %v > %v", fromBlock, toBlock))
-			continue
-		}
-
-		if toBlock-fromBlock < b.blockRange {
-			fromBlock = toBlock - b.blockRange + 1
-		}
-
-		b.CallAndSave(fromBlock, toBlock, cli)
 
 		time.Sleep(time.Since(startTime) - b.pullingInterval)
 	}
@@ -210,7 +226,7 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 			data = snappy.Encode(nil, data)
 		}
 
-		b.db.Put(DbKeyUserOp(hash), data)
+		b.db.Put(DbKeyUserOp(b.chain, hash), data)
 		//nextBlockNumber = int64(ethlog.BlockNumber + 1)
 	}
 

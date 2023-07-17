@@ -12,11 +12,11 @@ import (
 
 type Rpc interface {
 	Db() database.KVStore
-	EntryPoint() string
+	EntryPoints() []string
 	Compressed() bool
 }
 
-func eth_getLogsByUserOperation(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
+func eth_getLogsByUserOperation(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
 	var params []string
 	err := json.Unmarshal(req.Params, &params)
 	if err != nil || len(params) == 0 {
@@ -25,7 +25,7 @@ func eth_getLogsByUserOperation(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMess
 
 	var logs = make([][]byte, len(params))
 	for i, hash := range params {
-		data, _ := s.Db().Get(DbKeyUserOp(hash))
+		data, _ := s.Db().Get(DbKeyUserOp(chain, hash))
 		if data != nil && s.Compressed() {
 			decoded, err := snappy.Decode(nil, data)
 			if err == nil {
@@ -46,13 +46,13 @@ func eth_getLogsByUserOperation(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMess
 	return resp
 }
 
-func eth_getLogs(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
+func eth_getLogs(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
 	param, errMsg := web3.ParseEthGetLogsRequestParams(req)
 	if errMsg != nil {
 		return errMsg
 	}
 
-	entrypoint := s.EntryPoint()
+	entrypoint := s.EntryPoints()[0]
 	if strings.ToLower(param.Address) != entrypoint {
 		return rpc.NewJsonRpcMessageWithError(req.ID, -32000, "address mismatch entrypoint "+entrypoint)
 	}
@@ -63,7 +63,7 @@ func eth_getLogs(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage {
 	}
 
 	opHash := strings.ToLower(param.Topics[1])
-	data, _ := s.Db().Get(DbKeyUserOp(opHash))
+	data, _ := s.Db().Get(DbKeyUserOp(chain, opHash))
 
 	if data != nil && s.Compressed() {
 		decoded, err := snappy.Decode(nil, data)

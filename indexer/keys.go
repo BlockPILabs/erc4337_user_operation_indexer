@@ -3,18 +3,15 @@ package indexer
 import "fmt"
 
 var (
-	dbKeyPrefix       = ""
 	dbKeyUserOpPrefix = "op"
-
-	DbKeyStartBlock = dbKeyPrefix + "start-block"
 )
 
-func DbKey(key string) string {
-	dbKey := fmt.Sprintf("%s:%s", dbKeyPrefix, key)
+func DbKeyStartBlock(chain string) string {
+	dbKey := fmt.Sprintf("%s:start-block", chain)
 	return dbKey
 }
 
-func DbKeyUserOp(op string) string {
-	dbKey := fmt.Sprintf("%s:%s:%s", dbKeyPrefix, dbKeyUserOpPrefix, op)
+func DbKeyUserOp(chain, op string) string {
+	dbKey := fmt.Sprintf("%s:%s:%s", chain, dbKeyUserOpPrefix, op)
 	return dbKey
 }

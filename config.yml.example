@@ -1,0 +1,13 @@
+listen: 0.0.0.0:2052
+grpcListen: 0.0.0.0:2053
+
+compress: true
+
+db:
+  engin: pebble
+  ds: ./data/db
+
+chains:
+  - chain: "polygon-mumbai"
+    chainId: "80001"
+    backends: [ "https://polygon-mumbai.blockpi.network/v1/rpc/public" ]

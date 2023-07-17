@@ -3,17 +3,21 @@ package indexer
 import "golang.org/x/sync/errgroup"
 
 func Run(cfg *Config) error {
-	backend := NewBackend(cfg)
-
+	db := NewDb(cfg.Db.Engin, cfg.Db.Ds)
 	wg := errgroup.Group{}
+
+	for _, chain := range cfg.Chains {
+		backend := NewBackend(cfg.EntryPoints, chain, db)
+		wg.Go(func() error {
+			return backend.Run()
+		})
+	}
+
 	wg.Go(func() error {
-		return backend.Run()
+		return NewServer(cfg, db).Run()
 	})
 	wg.Go(func() error {
-		return NewServer(cfg, backend.db).Run()
-	})
-	wg.Go(func() error {
-		return NewGrpcServer(cfg, backend.db).Run()
+		return NewGrpcServer(cfg, db).Run()
 	})
 
 	return wg.Wait()

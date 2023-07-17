@@ -11,23 +11,26 @@ import (
 
 var (
 	invalidRequest = []byte("invalid request")
+	invalidChain   = []byte("invalid chain")
 )
 
+type handlerFunc func(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage
+
 type Server struct {
-	listen     string
-	db         database.KVStore
-	logger     log.Logger
-	entryPoint string
-	handlers   map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage
-	compress   bool
+	listen      string
+	db          database.KVStore
+	logger      log.Logger
+	entryPoints []string
+	handlers    map[string]handlerFunc
+	compress    bool
 }
 
 func (s *Server) Db() database.KVStore {
 	return s.db
 }
 
-func (s *Server) EntryPoint() string {
-	return s.entryPoint
+func (s *Server) EntryPoints() []string {
+	return s.entryPoints
 }
 
 func (s *Server) Compressed() bool {
@@ -36,12 +39,12 @@ func (s *Server) Compressed() bool {
 
 func NewServer(cfg *Config, db database.KVStore) *Server {
 	return &Server{
-		listen:     cfg.RpcListen,
-		db:         db,
-		logger:     log.Module("server"),
-		handlers:   map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage{},
-		entryPoint: cfg.EntryPoint,
-		compress:   cfg.Compress,
+		listen:      cfg.Listen,
+		db:          db,
+		logger:      log.Module("server"),
+		handlers:    map[string]handlerFunc{},
+		entryPoints: cfg.EntryPoints,
+		compress:    cfg.Compress,
 	}
 }
 
@@ -62,40 +65,47 @@ func (s *Server) writeJson(w http.ResponseWriter, data []byte) {
 	w.Write(data)
 }
 
-func (s *Server) validRequest(w http.ResponseWriter, r *http.Request) (*rpc.JsonRpcMessage, bool) {
+func (s *Server) validRequest(w http.ResponseWriter, r *http.Request) (*rpc.JsonRpcMessage, string, bool) {
 	if r.Method != "POST" {
 		resp, _ := json.Marshal(rpc.NewJsonRpcMessageWithError(rpc.ID0, -32000, string(invalidRequest)))
 		s.writeJson(w, resp)
-		return nil, false
+		return nil, "", false
 	}
 
-	defer r.Body.Close()
+	chain := r.Header.Get("chain")
+	if len(chain) == 0 {
+		resp, _ := json.Marshal(rpc.NewJsonRpcMessageWithError(rpc.ID0, -32000, string(invalidChain)))
+		s.writeJson(w, resp)
+		return nil, chain, false
+	}
+
 	reqBody, _ := io.ReadAll(r.Body)
+	defer r.Body.Close()
+
 	req := rpc.ParseJsonRpcMessage(reqBody)
 	if req == nil {
 		resp, _ := json.Marshal(rpc.NewJsonRpcMessageWithError(rpc.ID0, -32000, string(invalidRequest)))
 		s.writeJson(w, resp)
-		return nil, false
+		return nil, chain, false
 	}
 
 	_, ok := s.handlers[req.Method]
 	if !ok {
 		resp, _ := json.Marshal(rpc.NewJsonRpcMessageWithError(req.ID, -32000, string(invalidRequest)))
 		s.writeJson(w, resp)
-		return nil, false
+		return nil, chain, false
 	}
 
-	return req, true
+	return req, chain, true
 }
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
-	req, ok := s.validRequest(w, r)
+	req, chain, ok := s.validRequest(w, r)
 	if !ok {
 		return
 	}
-	//s.logger.Info(req.Method)
 
-	msg := s.handlers[req.Method](s, req)
+	msg := s.handlers[req.Method](s, chain, req)
 	resp, _ := json.Marshal(msg)
 
 	s.writeJson(w, resp)

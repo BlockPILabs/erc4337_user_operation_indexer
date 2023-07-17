@@ -9,26 +9,33 @@ import (
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/x/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"net"
+	"strings"
 )
 
 type GrpcServer struct {
 	proto.UnimplementedRelayServer
 	listen               string
 	db                   database.KVStore
-	entryPoint           string
-	handlers             map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage
+	entryPoints          []string
+	handlers             map[string]handlerFunc
 	maxConcurrentStreams int
 	logger               log.Logger
 	compress             bool
+	chain                string
+}
+
+func (s *GrpcServer) Chain() string {
+	return s.chain
 }
 
 func (s *GrpcServer) Db() database.KVStore {
 	return s.db
 }
 
-func (s *GrpcServer) EntryPoint() string {
-	return s.entryPoint
+func (s *GrpcServer) EntryPoints() []string {
+	return s.entryPoints
 }
 
 func (s *GrpcServer) Compressed() bool {
@@ -39,8 +46,8 @@ func NewGrpcServer(cfg *Config, db database.KVStore) *GrpcServer {
 	return &GrpcServer{
 		listen:               cfg.GrpcListen,
 		db:                   db,
-		entryPoint:           cfg.EntryPoint,
-		handlers:             map[string]func(s Rpc, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage{},
+		entryPoints:          cfg.EntryPoints,
+		handlers:             map[string]handlerFunc{},
 		maxConcurrentStreams: 4096,
 		logger:               log.Module("grpc-server"),
 		compress:             cfg.Compress,
@@ -83,7 +90,20 @@ func (s *GrpcServer) Relay(ctx context.Context, request *proto.Request) (*proto.
 		return resp, err
 	}
 
-	msg := s.handlers[req.Method](s, req)
+	chain := ""
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		chainMd := md.Get("chain")
+		if len(chainMd) > 0 {
+			chain = strings.TrimSpace(chainMd[0])
+		}
+	}
+
+	if len(chain) == 0 {
+		return nil, errors.New(string(invalidChain))
+	}
+
+	msg := s.handlers[req.Method](s, chain, req)
 	data, _ := json.Marshal(msg)
 
 	return &proto.Response{Body: data}, nil

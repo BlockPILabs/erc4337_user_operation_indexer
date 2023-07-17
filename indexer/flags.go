@@ -16,6 +16,12 @@ var (
 		Usage: "Version",
 	}
 
+	FlagConfig = &cli.StringFlag{
+		Name:  "config",
+		Usage: "config file",
+		Value: "",
+	}
+
 	FlagListen = &cli.StringFlag{
 		Name:  "listen",
 		Usage: "listen",
@@ -30,7 +36,7 @@ var (
 
 	FlagChain = &cli.StringFlag{
 		Name:  "chain",
-		Usage: "Chain",
+		Usage: "ChainCfg",
 		Value: "",
 	}
 
@@ -48,7 +54,7 @@ var (
 
 	FlagBackendUrl = &cli.StringFlag{
 		Name:  "backend",
-		Usage: "Backend chain rpc provider url",
+		Usage: "Backends chain rpc provider url",
 		Value: "",
 	}
 
@@ -56,12 +62,6 @@ var (
 		Name:  "compress",
 		Usage: "compress",
 		Value: false,
-	}
-
-	FlagDbPrefix = &cli.StringFlag{
-		Name:  "db.prefix",
-		Usage: "Backing database prefix, default: same value with --chain",
-		Value: "",
 	}
 
 	FlagDbEngin = &cli.StringFlag{

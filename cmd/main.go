@@ -17,6 +17,7 @@ func RootApp() *cli.App {
 		Usage:     "",
 		Flags: []cli.Flag{
 			indexer.FlagVersion,
+			indexer.FlagConfig,
 			indexer.FlagListen,
 			indexer.FlagGrpcListen,
 			indexer.FlagChain,
@@ -24,7 +25,6 @@ func RootApp() *cli.App {
 			indexer.FlagEntryPoint,
 			indexer.FlagBackendUrl,
 			indexer.FlagCompress,
-			indexer.FlagDbPrefix,
 			indexer.FlagDbEngin,
 			indexer.FlagDbDataSource,
 			indexer.FlagEthLogsStartBlock,
