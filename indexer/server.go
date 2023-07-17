@@ -25,6 +25,7 @@ type Server struct {
 	entryPoints []string
 	handlers    map[string]handlerFunc
 	compress    bool
+	chains      []string
 }
 
 func (s *Server) Db() database.KVStore {
@@ -40,7 +41,7 @@ func (s *Server) Compressed() bool {
 }
 
 func NewServer(cfg *Config, db database.KVStore) *Server {
-	return &Server{
+	s := &Server{
 		listen:      cfg.Listen,
 		db:          db,
 		logger:      log.Module("server"),
@@ -48,6 +49,10 @@ func NewServer(cfg *Config, db database.KVStore) *Server {
 		entryPoints: cfg.EntryPoints,
 		compress:    cfg.Compress,
 	}
+	for _, chain := range cfg.Chains {
+		s.chains = append(s.chains, chain.Chain)
+	}
+	return s
 }
 
 func (s *Server) Run() error {
@@ -119,17 +124,34 @@ func (s *Server) registerHandlers() {
 }
 
 type Status struct {
-	BlockNumber int64 `json:"block_number"`
-	LatestBlock int64 `json:"latest_block"`
-	CatchingUp  bool  `json:"catching_up"`
+	Chain       string `json:"chain"`
+	BlockNumber int64  `json:"block_number"`
+	LatestBlock int64  `json:"latest_block"`
+	CatchingUp  bool   `json:"catching_up"`
 }
 
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
-	status := Status{
-		BlockNumber: gBlockNumber,
-		LatestBlock: gLatestBlock,
-		CatchingUp:  !(gBlockNumber >= (gLatestBlock - 5)),
+	var stats []Status
+
+	for _, chain := range s.chains {
+		var blockNumber, latestBlock int64
+		v, ok := gBlockNumberMap.Load(chain)
+		if ok {
+			blockNumber = v.(int64)
+		}
+		v, ok = gLatestBlockMap.Load(chain)
+		if ok {
+			latestBlock = v.(int64)
+		}
+
+		stats = append(stats, Status{
+			Chain:       chain,
+			BlockNumber: blockNumber,
+			LatestBlock: latestBlock,
+			CatchingUp:  !(blockNumber >= (latestBlock - 5)),
+		})
 	}
-	data, _ := json.Marshal(status)
+
+	data, _ := json.Marshal(stats)
 	w.Write(data)
 }
