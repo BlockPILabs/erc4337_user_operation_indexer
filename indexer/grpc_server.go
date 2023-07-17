@@ -93,7 +93,7 @@ func (s *GrpcServer) Relay(ctx context.Context, request *proto.Request) (*proto.
 	chain := ""
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
-		chainMd := md.Get("chain")
+		chainMd := md.Get(HeaderChain)
 		if len(chainMd) > 0 {
 			chain = strings.TrimSpace(chainMd[0])
 		}

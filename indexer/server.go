@@ -9,6 +9,8 @@ import (
 	"net/http"
 )
 
+const HeaderChain = "x-bpi-chain"
+
 var (
 	invalidRequest = []byte("invalid request")
 	invalidChain   = []byte("invalid chain")
@@ -72,7 +74,7 @@ func (s *Server) validRequest(w http.ResponseWriter, r *http.Request) (*rpc.Json
 		return nil, "", false
 	}
 
-	chain := r.Header.Get("chain")
+	chain := r.Header.Get(HeaderChain)
 	if len(chain) == 0 {
 		resp, _ := json.Marshal(rpc.NewJsonRpcMessageWithError(rpc.ID0, -32000, string(invalidChain)))
 		s.writeJson(w, resp)
