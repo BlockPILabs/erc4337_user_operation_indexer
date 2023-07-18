@@ -156,7 +156,7 @@ func ParseConfig(ctx *cli.Context) *Config {
 				cfgFile.Chains[idx].BlockRangeSize = 1000
 			}
 
-			cfgFile.Chains[idx].BlockRangeSize = int64(math.Min(5000, float64(cfgFile.Chains[idx].BlockRangeSize)))
+			//cfgFile.Chains[idx].BlockRangeSize = int64(math.Min(5000, float64(cfgFile.Chains[idx].BlockRangeSize)))
 		}
 
 		if cfgCmd != nil {
