@@ -17,6 +17,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -66,31 +67,35 @@ func NewDb(engin, dataSource string) database.KVStore {
 	return db
 }
 
+func parseUrl(str string) string {
+	if strings.HasPrefix(str, "http://") || strings.HasPrefix(str, "https://") {
+		return str
+	}
+	return "http://" + str
+}
+
 func NewBackend(eps []string, chain ChainCfg, db database.KVStore) *Backend {
 	logger := log.Module("backend")
-
 	var clients []*web3.Web3
 	for _, url := range chain.Backends {
-		for n := 0; n < 10; n++ {
-			cli, err := web3.NewWeb3Client(url)
-			if err != nil {
-				logger.Error("error connect rpc", "url", url, "err", err)
-				continue
-			}
-
-			result, err := cli.Cli().ChainID(context.Background())
-			if err != nil {
-				logger.Error("error connect rpc", "url", url, "err", err)
-				continue
-			}
-			chainId := result.String()
-			if chain.ChainId != chainId {
-				logger.Error(fmt.Sprintf("error connect rpc, chain id %s expect %s", chainId, chain.ChainId), "url", url)
-				break
-			}
-			clients = append(clients, cli)
-			break
+		url = parseUrl(url)
+		cli, err := web3.NewWeb3Client(url)
+		if err != nil {
+			logger.Error("error connect rpc", "url", url, "err", err, "chain", chain.Chain)
+			continue
 		}
+
+		result, err := cli.Cli().ChainID(context.Background())
+		if err != nil {
+			logger.Error("error connect rpc", "url", url, "err", err, "chain", chain.Chain)
+			continue
+		}
+		chainId := result.String()
+		if chain.ChainId != chainId {
+			logger.Error(fmt.Sprintf("error connect rpc, chain id %s expect %s", chainId, chain.ChainId), "url", url, "chain", chain.Chain)
+			continue
+		}
+		clients = append(clients, cli)
 	}
 
 	if len(clients) == 0 {
@@ -126,7 +131,7 @@ func (b *Backend) LatestBlockNumber() (uint64, *web3.Web3, error) {
 	for idx, _ := range b.web3Clients {
 		blockNumber, err = b.web3Clients[idx].Cli().BlockNumber(context.Background())
 		if err != nil {
-			b.logger.Error("error get latest block number", "err", err)
+			b.logger.Warn("error get latest block number", "err", err)
 			continue
 		}
 		if blockNumber > blockNumberMax {
@@ -181,16 +186,20 @@ func (b *Backend) Run() error {
 			gLatestBlockMap.Store(b.chain, int64(latestBlockNumber))
 
 			fromBlock := b.StartBlock()
+			if fromBlock == int64(latestBlockNumber) {
+				return nil
+			}
+
 			toBlock := int64(math.Min(float64(fromBlock+b.blockRange-1), float64(latestBlockNumber)))
-			if fromBlock > toBlock+10 {
+			if fromBlock > toBlock {
 				//b.logger.Debug(fmt.Sprintf("error block range from > to: %v > %v", fromBlock, toBlock))
 				//return fmt.Errorf("error block range from > to: %v > %v", fromBlock, toBlock)
 				return nil
 			}
 
-			if toBlock-fromBlock < b.blockRange {
-				fromBlock = toBlock - b.blockRange + 1
-			}
+			//if toBlock-fromBlock < b.blockRange {
+			//	fromBlock = toBlock - b.blockRange + 1
+			//}
 
 			return b.CallAndSave(fromBlock, toBlock, cli)
 		}()
@@ -199,13 +208,13 @@ func (b *Backend) Run() error {
 			b.logger.Error(err.Error())
 		}
 
-		time.Sleep(time.Since(startTime) - b.pullingInterval)
+		time.Sleep(b.pullingInterval - time.Since(startTime))
 	}
 	//return errors.New("backend exited")
 }
 
 func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
-	b.logger.Info(fmt.Sprintf("filter logs range [%v,%v]", fromBlock, toBlock), "url", cli.Url())
+	b.logger.Info(fmt.Sprintf("filter logs range [%v,%v]", fromBlock, toBlock), "url", cli.Url(), "chain", b.chain)
 
 	ctx := context.Background()
 	param := ethereum.FilterQuery{
@@ -220,7 +229,7 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 		return err
 	}
 
-	nextBlockNumber := toBlock + 1
+	nextBlockNumber := toBlock
 	for _, ethlog := range ethlogs {
 		hash := ethlog.Topics[1].Hex()
 		data, _ := json.Marshal(ethlog)
@@ -234,7 +243,7 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 	}
 
 	if len(ethlogs) > 0 {
-		b.logger.Info("import logs", "size", len(ethlogs))
+		b.logger.Info("import logs", "size", len(ethlogs), "chain", b.chain)
 	}
 
 	b.SetNextStartBlock(nextBlockNumber)

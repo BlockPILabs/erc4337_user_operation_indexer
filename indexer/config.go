@@ -14,9 +14,9 @@ var (
 	DefaultEntryPoints = []string{"0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789"}
 
 	DefaultChainId = map[string]string{
-		"ethereum":         "1",
-		"ethereum-goerli":  "5",
-		"ethereum-sepolia": "11155111",
+		"ethereum": "1",
+		"goerli":   "5",
+		"sepolia":  "11155111",
 
 		"polygon":        "137",
 		"polygon-mumbai": "80001",
@@ -28,12 +28,13 @@ var (
 		"arbitrum-one":    "42161",
 		"arbitrum-nova":   "42170",
 		"arbitrum-goerli": "421613",
+		"bsc":             "56",
 	}
 
 	DefaultStartBlocks = map[string]int64{
-		"ethereum":         17066994,
-		"ethereum-goerli":  8812127,
-		"ethereum-sepolia": 3296058,
+		"ethereum": 17066994,
+		"goerli":   8812127,
+		"sepolia":  3296058,
 
 		"polygon":        41402415,
 		"polygon-mumbai": 34239265,
@@ -44,6 +45,7 @@ var (
 		"arbitrum":        79305493,
 		"arbitrum-nova":   8945015,
 		"arbitrum-goerli": 17068300,
+		"bsc":             27251985,
 	}
 )
 
