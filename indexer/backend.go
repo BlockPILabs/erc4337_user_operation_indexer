@@ -216,7 +216,9 @@ func (b *Backend) Run() error {
 func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 	b.logger.Info(fmt.Sprintf("filter logs range [%v,%v]", fromBlock, toBlock), "url", cli.Url(), "chain", b.chain)
 
-	ctx := context.Background()
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancelFunc()
+
 	param := ethereum.FilterQuery{
 		FromBlock: big.NewInt(fromBlock),
 		ToBlock:   big.NewInt(toBlock),
