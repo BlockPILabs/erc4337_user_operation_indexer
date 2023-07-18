@@ -28,6 +28,7 @@ var (
 	LogDescriptor = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f"
 	_logTopics    = [][]common.Hash{{common.HexToHash(LogDescriptor)}}
 
+	_httpTimeout    = time.Second * 10
 	gBlockNumberMap = sync.Map{}
 	gLatestBlockMap = sync.Map{}
 )
@@ -237,7 +238,7 @@ func (b *Backend) Run() error {
 func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 	b.logger.Info(fmt.Sprintf("filter logs range [%v,%v]", fromBlock, toBlock), "url", cli.Url(), "chain", b.chain)
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), _httpTimeout)
 	defer cancelFunc()
 
 	param := ethereum.FilterQuery{
