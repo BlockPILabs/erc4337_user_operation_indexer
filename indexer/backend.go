@@ -110,7 +110,7 @@ func NewBackend(eps []string, chain ChainCfg, db database.KVStore) *Backend {
 		startBlock:      chain.StartBlock,
 		blockRange:      chain.BlockRangeSize,
 		logger:          logger,
-		pullingInterval: time.Duration(1000) * time.Millisecond,
+		pullingInterval: time.Millisecond * time.Duration(chain.PullingInterval),
 		web3Clients:     clients,
 
 		startBlockDbKey: DbKeyStartBlock(chain.Chain),
@@ -207,7 +207,6 @@ func (b *Backend) Run() error {
 		if err != nil {
 			b.logger.Error(err.Error())
 		}
-
 		time.Sleep(b.pullingInterval - time.Since(startTime))
 	}
 	//return errors.New("backend exited")

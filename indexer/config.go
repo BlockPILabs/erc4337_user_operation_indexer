@@ -64,11 +64,12 @@ type DBCfg struct {
 }
 
 type ChainCfg struct {
-	Chain          string
-	ChainId        string `yaml:"chainId"`
-	Backends       []string
-	StartBlock     int64 `yaml:"startBlock"`
-	BlockRangeSize int64 `yaml:"blockRangeSize"`
+	Chain           string
+	ChainId         string `yaml:"chainId"`
+	Backends        []string
+	StartBlock      int64 `yaml:"startBlock"`
+	BlockRangeSize  int64 `yaml:"blockRangeSize"`
+	PullingInterval int64 `yaml:"pullingInterval"`
 }
 
 func ParseConfigFromCmd(ctx *cli.Context) (*Config, error) {
