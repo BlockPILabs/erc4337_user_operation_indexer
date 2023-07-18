@@ -34,6 +34,12 @@ var (
 		Value: "127.0.0.1:2053",
 	}
 
+	FlagReadonly = &cli.BoolFlag{
+		Name:  "readonly",
+		Usage: "readonly",
+		Value: false,
+	}
+
 	FlagChain = &cli.StringFlag{
 		Name:  "chain",
 		Usage: "ChainCfg",

@@ -21,6 +21,7 @@ func RootApp() *cli.App {
 			indexer.FlagListen,
 			indexer.FlagGrpcListen,
 			indexer.FlagChain,
+			indexer.FlagReadonly,
 			indexer.FlagChainId,
 			indexer.FlagEntryPoint,
 			indexer.FlagBackendUrl,

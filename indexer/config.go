@@ -119,6 +119,7 @@ func ParseConfigFromCmd(ctx *cli.Context) (*Config, error) {
 		},
 		EntryPoints: []string{strings.ToLower(ctx.String(FlagEntryPoint.Name))},
 		Compress:    ctx.Bool(FlagCompress.Name),
+		Readonly:    ctx.Bool(FlagReadonly.Name),
 	}
 	return cfg, nil
 }
@@ -175,6 +176,10 @@ func ParseConfig(ctx *cli.Context) *Config {
 			}
 			if ctx.IsSet(FlagDbDataSource.Name) {
 				cfgFile.Db.Ds = cfgCmd.Db.Ds
+			}
+
+			if ctx.IsSet(FlagReadonly.Name) {
+				cfgFile.Readonly = cfgCmd.Readonly
 			}
 		}
 	}
