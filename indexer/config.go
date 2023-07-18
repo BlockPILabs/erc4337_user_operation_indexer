@@ -53,6 +53,7 @@ type Config struct {
 	EntryPoints []string `yaml:"entryPoints"`
 	Listen      string
 	GrpcListen  string `yaml:"grpcListen"`
+	Readonly    bool
 	Compress    bool
 	Db          DBCfg
 	Chains      []ChainCfg

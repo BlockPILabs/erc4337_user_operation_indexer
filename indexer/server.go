@@ -5,6 +5,7 @@ import (
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/log"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
+	"github.com/spf13/cast"
 	"io"
 	"net/http"
 )
@@ -25,6 +26,7 @@ type Server struct {
 	entryPoints []string
 	handlers    map[string]handlerFunc
 	compress    bool
+	readonly    bool
 	chains      []string
 }
 
@@ -48,6 +50,7 @@ func NewServer(cfg *Config, db database.KVStore) *Server {
 		handlers:    map[string]handlerFunc{},
 		entryPoints: cfg.EntryPoints,
 		compress:    cfg.Compress,
+		readonly:    cfg.Readonly,
 	}
 	for _, chain := range cfg.Chains {
 		s.chains = append(s.chains, chain.Chain)
@@ -135,13 +138,19 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 
 	for _, chain := range s.chains {
 		var blockNumber, latestBlock int64
-		v, ok := gBlockNumberMap.Load(chain)
-		if ok {
-			blockNumber = v.(int64)
-		}
-		v, ok = gLatestBlockMap.Load(chain)
-		if ok {
-			latestBlock = v.(int64)
+		if s.readonly {
+			v, _ := s.db.Get(DbKeyStartBlock(chain))
+			blockNumber = cast.ToInt64(string(v))
+			latestBlock = blockNumber
+		} else {
+			v, ok := gBlockNumberMap.Load(chain)
+			if ok {
+				blockNumber = v.(int64)
+			}
+			v, ok = gLatestBlockMap.Load(chain)
+			if ok {
+				latestBlock = v.(int64)
+			}
 		}
 
 		stats = append(stats, Status{

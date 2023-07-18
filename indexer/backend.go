@@ -14,9 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
+	"github.com/spf13/cast"
 	"math"
 	"math/big"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -160,7 +160,7 @@ func (b *Backend) StartBlock() int64 {
 		return b.startBlock
 	}
 
-	blockNumber, _ := strconv.ParseInt(string(val), 10, 64)
+	blockNumber := cast.ToInt64(string(val))
 	return blockNumber
 }
 

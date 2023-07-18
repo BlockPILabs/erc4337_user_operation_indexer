@@ -6,11 +6,13 @@ func Run(cfg *Config) error {
 	db := NewDb(cfg.Db.Engin, cfg.Db.Ds)
 	wg := errgroup.Group{}
 
-	for _, chain := range cfg.Chains {
-		backend := NewBackend(cfg.EntryPoints, chain, db)
-		wg.Go(func() error {
-			return backend.Run()
-		})
+	if !cfg.Readonly {
+		for _, chain := range cfg.Chains {
+			backend := NewBackend(cfg.EntryPoints, chain, db)
+			wg.Go(func() error {
+				return backend.Run()
+			})
+		}
 	}
 
 	wg.Go(func() error {

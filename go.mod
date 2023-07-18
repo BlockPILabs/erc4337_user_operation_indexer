@@ -5,12 +5,15 @@ go 1.19
 require (
 	github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811
 	github.com/ethereum/go-ethereum v1.12.0
+	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/redis/go-redis/v9 v9.0.5
+	github.com/spf13/cast v1.3.0
 	github.com/urfave/cli/v2 v2.25.5
 	golang.org/x/sync v0.2.0
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.28.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -31,7 +34,6 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
@@ -59,5 +61,4 @@ require (
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
