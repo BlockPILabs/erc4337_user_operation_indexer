@@ -12,7 +12,14 @@ func NewWeb3Client(url string) (*Web3, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Web3{client: cli, url: url}, nil
+}
+
+func (w3 *Web3) SetHeaders(headers map[string]string) {
+	for k, v := range headers {
+		w3.client.Client().SetHeader(k, v)
+	}
 }
 
 func (w3 *Web3) Cli() *ethclient.Client {

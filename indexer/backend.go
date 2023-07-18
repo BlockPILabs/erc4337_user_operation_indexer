@@ -17,6 +17,8 @@ import (
 	"github.com/spf13/cast"
 	"math"
 	"math/big"
+	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +47,8 @@ type Backend struct {
 	logger log.Logger
 
 	compress bool
+
+	headers map[string]string
 }
 
 func NewDb(engin, dataSource string) database.KVStore {
@@ -67,22 +71,40 @@ func NewDb(engin, dataSource string) database.KVStore {
 	return db
 }
 
-func parseUrl(str string) string {
-	if strings.HasPrefix(str, "http://") || strings.HasPrefix(str, "https://") {
-		return str
+func parseUrl(str string) (*url.URL, error) {
+	if !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
+		str = "http://" + str
 	}
-	return "http://" + str
+
+	return url.Parse(str)
 }
 
-func NewBackend(eps []string, chain ChainCfg, db database.KVStore) *Backend {
+func NewBackend(headers []HeadersCfg, eps []string, chain ChainCfg, db database.KVStore) *Backend {
+
 	logger := log.Module("backend")
 	var clients []*web3.Web3
-	for _, url := range chain.Backends {
-		url = parseUrl(url)
-		cli, err := web3.NewWeb3Client(url)
+	for _, uri := range chain.Backends {
+		url, err := parseUrl(uri)
+		if err != nil {
+			logger.Error("invalid backend", "url", uri, "err", err, "chain", chain.Chain)
+			continue
+		}
+
+		cli, err := web3.NewWeb3Client(url.String())
 		if err != nil {
 			logger.Error("error connect rpc", "url", url, "err", err, "chain", chain.Chain)
 			continue
+		}
+
+		for _, header := range headers {
+			ok, _ := regexp.Match(header.Host, []byte(url.Host))
+			if ok {
+				headers := map[string]string{}
+				for i := 0; i < len(header.Headers); i += 2 {
+					headers[header.Headers[i]] = header.Headers[i+1]
+				}
+				cli.SetHeaders(headers)
+			}
 		}
 
 		result, err := cli.Cli().ChainID(context.Background())
@@ -226,7 +248,7 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 	}
 	ethlogs, err := cli.Cli().FilterLogs(ctx, param)
 	if err != nil {
-		b.logger.Error("error filter logs", "err", err, "url", cli.Url())
+		b.logger.Error("error filter logs", "err", err, "url", cli.Url(), "chain", b.chain)
 		return err
 	}
 

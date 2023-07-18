@@ -57,6 +57,7 @@ type Config struct {
 	Compress    bool
 	Db          DBCfg
 	Chains      []ChainCfg
+	Headers     []HeadersCfg
 }
 
 type DBCfg struct {
@@ -71,6 +72,11 @@ type ChainCfg struct {
 	StartBlock      int64 `yaml:"startBlock"`
 	BlockRangeSize  int64 `yaml:"blockRangeSize"`
 	PullingInterval int64 `yaml:"pullingInterval"`
+}
+
+type HeadersCfg struct {
+	Host    string
+	Headers []string
 }
 
 func ParseConfigFromCmd(ctx *cli.Context) (*Config, error) {

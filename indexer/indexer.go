@@ -8,7 +8,7 @@ func Run(cfg *Config) error {
 
 	if !cfg.Readonly {
 		for _, chain := range cfg.Chains {
-			backend := NewBackend(cfg.EntryPoints, chain, db)
+			backend := NewBackend(cfg.Headers, cfg.EntryPoints, chain, db)
 			wg.Go(func() error {
 				return backend.Run()
 			})
