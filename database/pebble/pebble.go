@@ -122,6 +122,7 @@ func (d *Database) Close() error {
 
 func (d *Database) Has(key string) (bool, error) {
 	_, closer, err := d.db.Get([]byte(key))
+
 	if err == pebble.ErrNotFound {
 		return false, nil
 	} else if err != nil {

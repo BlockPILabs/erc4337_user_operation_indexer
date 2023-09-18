@@ -25,8 +25,8 @@ type EthGetLogsRequestParams struct {
 
 func ParseEthGetLogsRequestParams(req *rpc.JsonRpcMessage) (*EthGetLogsRequestParams, *rpc.JsonRpcMessage) {
 	var params []struct {
-		Address   json.RawMessage
-		Topics    []json.RawMessage
+		Address   *json.RawMessage
+		Topics    *json.RawMessage
 		FromBlock string
 		ToBlock   string
 	}
@@ -38,52 +38,64 @@ func ParseEthGetLogsRequestParams(req *rpc.JsonRpcMessage) (*EthGetLogsRequestPa
 	if len(params) != 1 {
 		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32602, "too many arguments, want at most 1")
 	}
-
-	address := ""
 	param := params[0]
-	if IsJsonArray(param.Address) {
-		var addresses []string
-		json.Unmarshal(param.Address, &addresses)
-		if len(addresses) > 1 {
-			return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32602, "too many addresses, want at most 1")
-		}
-		if len(addresses) == 1 {
-			address = addresses[0]
-		}
-	} else {
-		json.Unmarshal(param.Address, &address)
-	}
 
-	if len(address) == 0 {
+	addrArr, _ := parseToStringOrArray(*param.Address)
+	if len(addrArr) == 0 {
 		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32602, "address wanted")
 	}
+	if len(addrArr) != 1 {
+		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32602, "invalid addresses, want at most 1")
+	}
 
-	if len(param.Topics) == 0 {
+	topicsParam := *param.Topics
+
+	if !IsJsonArray(topicsParam) {
 		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "topics wanted")
 	}
 
-	var topics []string
-	if IsJsonArray(param.Topics[0]) {
-		if len(param.Topics) > 1 {
-			return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "too many topics, want at most 1")
-		}
-		json.Unmarshal(param.Topics[0], &topics)
-	} else {
-		for _, topic := range param.Topics {
-			var topicStr string
-			json.Unmarshal(topic, &topicStr)
-			topics = append(topics, topicStr)
-		}
+	var topics []json.RawMessage
+	json.Unmarshal(topicsParam, &topics)
+	if len(topics) < 2 {
+		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "too less topics, want at least 2")
 	}
 
-	if len(topics) < 2 {
-		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "require at least 2 topic descriptors")
+	var topicsArr []string
+	topics1, _ := parseToStringOrArray(topics[0])
+	if len(topics1) == 0 {
+		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "too less topics")
 	}
+	if len(topics1) != 1 {
+		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "too many topics")
+	}
+	topicsArr = append(topicsArr, topics1[0])
+
+	topics2, _ := parseToStringOrArray(topics[1])
+	if len(topics2) == 0 {
+		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "too less topics")
+	}
+	if len(topics2) != 1 {
+		return nil, rpc.NewJsonRpcMessageWithError(req.ID, -32000, "too many topics")
+	}
+	topicsArr = append(topicsArr, topics2[0])
 
 	return &EthGetLogsRequestParams{
-		Address:   address,
-		Topics:    topics,
+		Address:   addrArr[0],
+		Topics:    topicsArr,
 		FromBlock: param.FromBlock,
 		ToBlock:   param.ToBlock,
 	}, nil
+}
+
+func parseToStringOrArray(data []byte) ([]string, bool) {
+	var result []string
+	isArray := IsJsonArray(data)
+	if isArray {
+		json.Unmarshal(data, &result)
+	} else {
+		var str string
+		json.Unmarshal(data, &str)
+		result = append(result, str)
+	}
+	return result, isArray
 }
