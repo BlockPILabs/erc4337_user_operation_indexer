@@ -2,12 +2,13 @@ package indexer
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
+
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/log"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/spf13/cast"
-	"io"
-	"net/http"
 )
 
 const HeaderChain = "x-bpi-chain"
@@ -62,7 +63,7 @@ func (s *Server) Run() error {
 	s.registerHandlers()
 	http.HandleFunc("/", s.handler)
 	http.HandleFunc("/status", s.status)
-	s.logger.Info("aip server listen: " + s.listen)
+	s.logger.Info("api server listen: " + s.listen)
 	err := http.ListenAndServe(s.listen, nil)
 	if err != nil {
 		s.logger.Error("aip server listen failed: " + s.listen)

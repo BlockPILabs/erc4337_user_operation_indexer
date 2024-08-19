@@ -2,16 +2,17 @@ package indexer
 
 import (
 	"errors"
-	"github.com/urfave/cli/v2"
 	"math"
 	"os"
 	"strings"
+
+	"github.com/urfave/cli/v2"
 
 	"gopkg.in/yaml.v3"
 )
 
 var (
-	DefaultEntryPoints = []string{"0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789"}
+	DefaultEntryPoints = []string{"0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789", "0xdc5319815cdaac2d113f7f275bc893ed7d9ca469"}
 
 	DefaultChainId = map[string]string{
 		"ethereum": "1",

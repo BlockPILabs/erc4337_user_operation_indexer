@@ -5,6 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	"net/url"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/memorydb"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/pebble"
@@ -15,22 +23,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
 	"github.com/spf13/cast"
-	"math"
-	"math/big"
-	"net/url"
-	"regexp"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
 	LogDescriptor = "0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f"
 	_logTopics    = [][]common.Hash{{common.HexToHash(LogDescriptor)}}
 
-	_httpTimeout    = time.Second * 10
-	gBlockNumberMap = sync.Map{}
-	gLatestBlockMap = sync.Map{}
+	_httpTimeout      = time.Second * 10
+	nexBlockNumberMap = sync.Map{}
+	gBlockNumberMap   = sync.Map{}
+	gLatestBlockMap   = sync.Map{}
 )
 
 type Backend struct {
@@ -175,6 +177,12 @@ func (b *Backend) LatestBlockNumber() (uint64, *web3.Web3, error) {
 }
 
 func (b *Backend) StartBlock() int64 {
+	v, ok := nexBlockNumberMap.Load(b.startBlockDbKey)
+	if ok {
+		blockNumber := v.(int64)
+		return blockNumber
+	}
+
 	val, err := b.db.Get(b.startBlockDbKey)
 	if err != nil {
 		panic(fmt.Sprintf("error get db key %s: %s", b.startBlockDbKey, err.Error()))
@@ -183,7 +191,8 @@ func (b *Backend) StartBlock() int64 {
 		return b.startBlock
 	}
 
-	blockNumber := cast.ToInt64(string(val))
+	blockNumber := int64(math.Max(float64(cast.ToInt64(string(val))-b.blockRange), 0))
+
 	return blockNumber
 }
 
@@ -192,8 +201,9 @@ func (b *Backend) SetNextStartBlock(block int64) {
 	next := []byte(fmt.Sprintf("%v", block))
 	err := b.db.Put(b.startBlockDbKey, next)
 	if err != nil {
-		panic(fmt.Sprintf("error put db key %s: %s", DbKeyStartBlock, err.Error()))
+		panic(fmt.Sprintf("error put db key %s: %s", b.startBlockDbKey, err.Error()))
 	}
+	nexBlockNumberMap.Store(b.startBlockDbKey, block)
 }
 
 func (b *Backend) Run() error {

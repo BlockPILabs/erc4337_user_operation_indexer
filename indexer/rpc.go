@@ -3,11 +3,13 @@ package indexer
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
+
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/web3"
 	"github.com/golang/snappy"
-	"strings"
+	"golang.org/x/exp/slices"
 )
 
 type Rpc interface {
@@ -52,9 +54,8 @@ func eth_getLogs(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessa
 		return errMsg
 	}
 
-	entrypoint := s.EntryPoints()[0]
-	if strings.ToLower(param.Address) != entrypoint {
-		return rpc.NewJsonRpcMessageWithError(req.ID, -32000, "address mismatch entrypoint "+entrypoint)
+	if !slices.Contains(s.EntryPoints(), strings.ToLower(param.Address)) {
+		return rpc.NewJsonRpcMessageWithError(req.ID, -32000, "address mismatch entrypoint "+param.Address)
 	}
 
 	descriptor := strings.ToLower(param.Topics[0])

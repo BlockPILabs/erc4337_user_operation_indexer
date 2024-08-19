@@ -7,7 +7,7 @@ var (
 )
 
 func DbKeyStartBlock(chain string) string {
-	dbKey := fmt.Sprintf("%s:start-block", chain)
+	dbKey := fmt.Sprintf("start-block:%s", chain)
 	return dbKey
 }
 
