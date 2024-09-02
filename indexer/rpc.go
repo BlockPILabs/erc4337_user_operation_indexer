@@ -75,15 +75,19 @@ func eth_getLogs(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessa
 
 	if len(data) > 0 {
 		info := struct {
+			Address     string
 			Topics      []string
 			BlockNumber string
 		}{}
 		json.Unmarshal(data, &info)
-
-		for i := 0; i < len(param.Topics) && i < len(info.Topics); i++ {
-			if strings.ToLower(param.Topics[i]) != strings.ToLower(info.Topics[i]) {
-				data = []byte("")
-				break
+		if strings.ToLower(param.Address) != strings.ToLower(info.Address) {
+			data = []byte("")
+		} else {
+			for i := 0; i < len(param.Topics) && i < len(info.Topics); i++ {
+				if strings.ToLower(param.Topics[i]) != strings.ToLower(info.Topics[i]) {
+					data = []byte("")
+					break
+				}
 			}
 		}
 	}
