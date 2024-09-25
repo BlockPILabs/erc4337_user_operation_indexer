@@ -1,12 +1,13 @@
 package pebble
 
 import (
+	"runtime"
+	"sync"
+
 	"github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"runtime"
-	"sync"
 )
 
 const (
@@ -63,7 +64,7 @@ func NewPebbleDb(file string, cache int, handles int, readonly bool) (*Database,
 
 		// The size of memory table(as well as the write buffer).
 		// Note, there may have more than two memory tables in the system.
-		MemTableSize: memTableSize,
+		MemTableSize: uint64(memTableSize),
 
 		// MemTableStopWritesThreshold places a hard limit on the size
 		// of the existent MemTables(including the frozen one).
