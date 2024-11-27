@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
+	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/databend"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/memorydb"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/pebble"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database/redisdb"
@@ -67,8 +68,13 @@ func NewDb(engin, dataSource string) database.KVStore {
 		if err != nil {
 			panic(fmt.Sprintf("error create pebble db, %v", err))
 		}
+	case "databend":
+		db, err = databend.NewDatabendDB(dataSource)
+		if err != nil {
+			panic(fmt.Sprintf("error create databend db, %v", err))
+		}
 	default:
-		panic(fmt.Sprintf("Invalid db.engine '%s', allowed 'memory' or 'pebble' or 'redis'", engin))
+		panic(fmt.Sprintf("Invalid db.engine '%s', allowed 'memory' or 'pebble' or 'redis' or 'databend'", engin))
 	}
 
 	return db
@@ -82,8 +88,7 @@ func parseUrl(str string) (*url.URL, error) {
 	return url.Parse(str)
 }
 
-func NewBackend(headers []HeadersCfg, eps []string, chain ChainCfg, db database.KVStore) *Backend {
-
+func NewBackend(headers []HeadersCfg, eps []string, chain ChainCfg, db database.KVStore, compress bool) *Backend {
 	logger := log.Module("backend")
 	var clients []*web3.Web3
 	for _, uri := range chain.Backends {
@@ -135,9 +140,9 @@ func NewBackend(headers []HeadersCfg, eps []string, chain ChainCfg, db database.
 		startBlock:      chain.StartBlock,
 		blockRange:      chain.BlockRangeSize,
 		logger:          logger,
+		compress:        compress,
 		pullingInterval: time.Millisecond * time.Duration(chain.PullingInterval),
 		web3Clients:     clients,
-
 		startBlockDbKey: DbKeyStartBlock(chain.Chain),
 	}
 

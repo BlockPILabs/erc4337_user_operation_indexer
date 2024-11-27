@@ -51,14 +51,17 @@ var (
 )
 
 type Config struct {
-	EntryPoints []string `yaml:"entryPoints"`
-	Listen      string
-	GrpcListen  string `yaml:"grpcListen"`
-	Readonly    bool
-	Compress    bool
-	Db          DBCfg
-	Chains      []ChainCfg
-	Headers     []HeadersCfg
+	EntryPoints   []string `yaml:"entryPoints"`
+	Listen        string
+	UseTls        bool   `yaml:"useTls"`
+	TlsPubKey     string `yaml:"tlsPubKey"`
+	TlsPrivateKey string `yaml:"tlsPrivateKey"`
+	GrpcListen    string `yaml:"grpcListen"`
+	Readonly      bool
+	Compress      bool
+	Db            DBCfg
+	Chains        []ChainCfg
+	Headers       []HeadersCfg
 }
 
 type DBCfg struct {

@@ -4,21 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"strings"
+
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/database"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/log"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/x/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
-	"net"
-	"strings"
 )
 
 type GrpcServer struct {
 	proto.UnimplementedRelayServer
-	listen               string
+	cfg                  *Config
 	db                   database.KVStore
-	entryPoints          []string
 	handlers             map[string]handlerFunc
 	maxConcurrentStreams int
 	logger               log.Logger
@@ -35,7 +36,7 @@ func (s *GrpcServer) Db() database.KVStore {
 }
 
 func (s *GrpcServer) EntryPoints() []string {
-	return s.entryPoints
+	return s.cfg.EntryPoints
 }
 
 func (s *GrpcServer) Compressed() bool {
@@ -44,9 +45,8 @@ func (s *GrpcServer) Compressed() bool {
 
 func NewGrpcServer(cfg *Config, db database.KVStore) *GrpcServer {
 	return &GrpcServer{
-		listen:               cfg.GrpcListen,
+		cfg:                  cfg,
 		db:                   db,
-		entryPoints:          cfg.EntryPoints,
 		handlers:             map[string]handlerFunc{},
 		maxConcurrentStreams: 4096,
 		logger:               log.Module("grpc-server"),
@@ -59,6 +59,18 @@ func (s *GrpcServer) registerHandlers() {
 	s.handlers["eth_getLogs"] = eth_getLogs
 }
 
+func (s *GrpcServer) loadTLSCredentials() (credentials.TransportCredentials, error) {
+	serverCert, err := credentials.NewServerTLSFromFile(s.cfg.TlsPubKey, s.cfg.TlsPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	//cfg := &tls.Config{
+	//	Certificates: []tls.Certificate{serverCert},
+	//	ClientAuth:   tls.NoClientCert,
+	//}
+	return serverCert, nil
+}
+
 func (s *GrpcServer) Run() error {
 	s.registerHandlers()
 
@@ -68,19 +80,27 @@ func (s *GrpcServer) Run() error {
 	}
 
 	opts = append(opts, grpc.UnaryInterceptor(interceptor))
+	if s.cfg.UseTls {
+		cred, err := s.loadTLSCredentials()
+		if err != nil {
+			panic(err)
+		}
+		opts = append(opts, grpc.Creds(cred))
+	}
+
 	server := grpc.NewServer(
 		grpc.MaxConcurrentStreams(uint32(s.maxConcurrentStreams)),
 	)
 
 	proto.RegisterRelayServer(server, s)
 
-	listen, err := net.Listen("tcp", s.listen)
+	listen, err := net.Listen("tcp", s.cfg.GrpcListen)
 	if err != nil {
-		log.Error("failed to listen", "server", s.listen, "err", err)
+		log.Error("failed to listen", "server", s.cfg.GrpcListen, "err", err)
 		panic(err)
 	}
 
-	s.logger.Info("grpc server listen: " + s.listen)
+	s.logger.Info("grpc server listen: " + s.cfg.GrpcListen)
 	return server.Serve(listen)
 }
 

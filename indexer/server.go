@@ -9,6 +9,7 @@ import (
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/log"
 	"github.com/BlockPILabs/erc4337_user_operation_indexer/rpc"
 	"github.com/spf13/cast"
+	"google.golang.org/grpc/credentials"
 )
 
 const HeaderChain = "x-bpi-chain"
@@ -21,14 +22,13 @@ var (
 type handlerFunc func(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessage
 
 type Server struct {
-	listen      string
-	db          database.KVStore
-	logger      log.Logger
-	entryPoints []string
-	handlers    map[string]handlerFunc
-	compress    bool
-	readonly    bool
-	chains      []string
+	cfg      *Config
+	db       database.KVStore
+	logger   log.Logger
+	handlers map[string]handlerFunc
+	compress bool
+	readonly bool
+	chains   []string
 }
 
 func (s *Server) Db() database.KVStore {
@@ -36,7 +36,7 @@ func (s *Server) Db() database.KVStore {
 }
 
 func (s *Server) EntryPoints() []string {
-	return s.entryPoints
+	return s.cfg.EntryPoints
 }
 
 func (s *Server) Compressed() bool {
@@ -45,13 +45,12 @@ func (s *Server) Compressed() bool {
 
 func NewServer(cfg *Config, db database.KVStore) *Server {
 	s := &Server{
-		listen:      cfg.Listen,
-		db:          db,
-		logger:      log.Module("server"),
-		handlers:    map[string]handlerFunc{},
-		entryPoints: cfg.EntryPoints,
-		compress:    cfg.Compress,
-		readonly:    cfg.Readonly,
+		cfg:      cfg,
+		db:       db,
+		logger:   log.Module("server"),
+		handlers: map[string]handlerFunc{},
+		compress: cfg.Compress,
+		readonly: cfg.Readonly,
 	}
 	for _, chain := range cfg.Chains {
 		s.chains = append(s.chains, chain.Chain)
@@ -59,14 +58,35 @@ func NewServer(cfg *Config, db database.KVStore) *Server {
 	return s
 }
 
+func (s *Server) loadTLSCredentials() (credentials.TransportCredentials, error) {
+	serverCert, err := credentials.NewServerTLSFromFile(s.cfg.TlsPubKey, s.cfg.TlsPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	//cfg := &tls.Config{
+	//	Certificates: []tls.Certificate{serverCert},
+	//	ClientAuth:   tls.NoClientCert,
+	//}
+	return serverCert, nil
+}
+
 func (s *Server) Run() error {
 	s.registerHandlers()
 	http.HandleFunc("/", s.handler)
 	http.HandleFunc("/status", s.status)
-	s.logger.Info("api server listen: " + s.listen)
-	err := http.ListenAndServe(s.listen, nil)
-	if err != nil {
-		s.logger.Error("aip server listen failed: " + s.listen)
+	s.logger.Info("api server listen: " + s.cfg.Listen)
+
+	var err error
+	if s.cfg.UseTls {
+		err = http.ListenAndServeTLS(s.cfg.Listen, s.cfg.TlsPubKey, s.cfg.TlsPrivateKey, nil)
+		if err != nil {
+			s.logger.Error("https api server listen failed: " + s.cfg.Listen)
+		}
+	} else {
+		err = http.ListenAndServe(s.cfg.Listen, nil)
+		if err != nil {
+			s.logger.Error("http api server listen failed: " + s.cfg.Listen)
+		}
 	}
 	return err
 }
