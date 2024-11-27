@@ -188,7 +188,7 @@ func (b *Backend) StartBlock() int64 {
 		return blockNumber
 	}
 
-	val, err := b.db.Get(b.startBlockDbKey)
+	val, err := b.db.Get(b.startBlockDbKey, false)
 	if err != nil {
 		panic(fmt.Sprintf("error get db key %s: %s", b.startBlockDbKey, err.Error()))
 	}
@@ -204,7 +204,7 @@ func (b *Backend) StartBlock() int64 {
 func (b *Backend) SetNextStartBlock(block int64) {
 	gBlockNumberMap.Store(b.chain, block)
 	next := []byte(fmt.Sprintf("%v", block))
-	err := b.db.Put(b.startBlockDbKey, next)
+	err := b.db.Put(b.startBlockDbKey, next, false)
 	if err != nil {
 		panic(fmt.Sprintf("error put db key %s: %s", b.startBlockDbKey, err.Error()))
 	}
@@ -277,7 +277,7 @@ func (b *Backend) CallAndSave(fromBlock, toBlock int64, cli *web3.Web3) error {
 			data = snappy.Encode(nil, data)
 		}
 
-		b.db.Put(DbKeyUserOp(b.chain, hash), data)
+		b.db.Put(DbKeyUserOp(b.chain, hash), data, b.compress)
 		//nextBlockNumber = int64(ethlog.BlockNumber + 1)
 	}
 
