@@ -133,7 +133,7 @@ func (d *Database) Has(key string) (bool, error) {
 	return true, nil
 }
 
-func (d *Database) Get(key string) ([]byte, error) {
+func (d *Database) Get(key string, compressed bool) ([]byte, error) {
 	dat, closer, err := d.db.Get([]byte(key))
 	if err != nil {
 		if err == pebble.ErrNotFound {
@@ -147,7 +147,7 @@ func (d *Database) Get(key string) ([]byte, error) {
 	return ret, nil
 }
 
-func (d *Database) Put(key string, value []byte) error {
+func (d *Database) Put(key string, value []byte, compressed bool) error {
 	return d.db.Set([]byte(key), value, pebble.NoSync)
 }
 

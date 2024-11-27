@@ -67,7 +67,7 @@ func (d *Database) Has(key string) (bool, error) {
 	return true, nil
 }
 
-func (d *Database) Get(key string) ([]byte, error) {
+func (d *Database) Get(key string, compressed bool) ([]byte, error) {
 	query := fmt.Sprintf(`SELECT * FROM indexer WHERE key='%s'`, key)
 	row := d.db.QueryRow(query)
 
@@ -80,32 +80,33 @@ func (d *Database) Get(key string) ([]byte, error) {
 		return nil, err
 	}
 
-	result, err := base64.StdEncoding.DecodeString(col2)
-	if err != nil {
+	var result []byte
+	if compressed {
+		result, err = base64.StdEncoding.DecodeString(col2)
+		if err != nil {
+			result = []byte(col2)
+		}
+	} else {
 		result = []byte(col2)
 	}
 
 	return result, nil
 }
 
-func (d *Database) Put(key string, value []byte) error {
-	data := base64.StdEncoding.EncodeToString(value)
-	query := fmt.Sprintf(`REPLACE INTO indexer ON (key) VALUES ('%s', '%s')`, key, data)
-	r, err := d.db.Exec(query)
-	if err != nil {
-		return err
+func (d *Database) Put(key string, value []byte, compressed bool) error {
+	var data string
+	if compressed {
+		data = base64.StdEncoding.EncodeToString(value)
+	} else {
+		data = string(value)
 	}
-	lastInsertId, _ := r.LastInsertId()
-	rowsAffected, _ := r.RowsAffected()
-	log.Debug("Put", "id", lastInsertId, "rows", rowsAffected)
-	return nil
+	query := fmt.Sprintf(`REPLACE INTO indexer ON (key) VALUES ('%s', '%s')`, key, data)
+	_, err := d.db.Exec(query)
+	return err
 }
 
 func (d *Database) Delete(key string) error {
 	query := fmt.Sprintf(`DELETE FROM indexer WHERE key='%s'`, key)
 	_, err := d.db.Exec(query)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

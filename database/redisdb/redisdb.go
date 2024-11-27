@@ -2,11 +2,12 @@ package redisdb
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/redis/go-redis/v9"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/redis/go-redis/v9"
 )
 
 type Database struct {
@@ -65,7 +66,7 @@ func (db *Database) Has(key string) (bool, error) {
 }
 
 // Get retrieves the given key if it's present in the key-value store.
-func (db *Database) Get(key string) ([]byte, error) {
+func (db *Database) Get(key string, compressed bool) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -78,7 +79,7 @@ func (db *Database) Get(key string) ([]byte, error) {
 }
 
 // Put inserts the given value into the key-value store.
-func (db *Database) Put(key string, value []byte) error {
+func (db *Database) Put(key string, value []byte, compressed bool) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 

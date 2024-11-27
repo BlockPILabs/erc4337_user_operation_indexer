@@ -1,8 +1,9 @@
 package memorydb
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"sync"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Database struct {
@@ -32,7 +33,7 @@ func (db *Database) Has(key string) (bool, error) {
 	return ok, nil
 }
 
-func (db *Database) Get(key string) ([]byte, error) {
+func (db *Database) Get(key string, compressed bool) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -43,7 +44,7 @@ func (db *Database) Get(key string) ([]byte, error) {
 	return nil, nil
 }
 
-func (db *Database) Put(key string, value []byte) error {
+func (db *Database) Put(key string, value []byte, compressed bool) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
