@@ -160,7 +160,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	for _, chain := range s.chains {
 		var blockNumber, latestBlock int64
 		if s.readonly {
-			v, _ := s.db.Get(DbKeyStartBlock(chain))
+			v, _ := s.db.Get(DbKeyStartBlock(chain), false)
 			blockNumber = cast.ToInt64(string(v))
 			latestBlock = blockNumber
 		} else {

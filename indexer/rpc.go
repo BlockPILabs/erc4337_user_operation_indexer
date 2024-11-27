@@ -27,7 +27,7 @@ func eth_getLogsByUserOperation(s Rpc, chain string, req *rpc.JsonRpcMessage) *r
 
 	var logs = make([][]byte, len(params))
 	for i, hash := range params {
-		data, _ := s.Db().Get(DbKeyUserOp(chain, hash))
+		data, _ := s.Db().Get(DbKeyUserOp(chain, hash), s.Compressed())
 		if data != nil && s.Compressed() {
 			decoded, err := snappy.Decode(nil, data)
 			if err == nil {
@@ -64,7 +64,7 @@ func eth_getLogs(s Rpc, chain string, req *rpc.JsonRpcMessage) *rpc.JsonRpcMessa
 	}
 
 	opHash := strings.ToLower(param.Topics[1])
-	data, _ := s.Db().Get(DbKeyUserOp(chain, opHash))
+	data, _ := s.Db().Get(DbKeyUserOp(chain, opHash), s.Compressed())
 
 	if data != nil && s.Compressed() {
 		decoded, err := snappy.Decode(nil, data)
